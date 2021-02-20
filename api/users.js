@@ -1,8 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const usersRouter = express.Router();
-const { getAllUsers, getUserByUsername, createUser } = require('../db');
-const jwt = require('jsonwebtoken')
+const { getAllUsers, getUserByUsername, createUser, updateUser } = require('../db');
+const jwt = require('jsonwebtoken');
+const { requireUser } = require('./utils');
 
 usersRouter.use((req, res, next) => {
   console.log("A request is being made to /users");
@@ -18,7 +19,6 @@ usersRouter.get('/', async (req, res) => {
 });
 
 usersRouter.post('/login', async (req, res, next) => {
-  console.log(req.body)
   const { username, password } = req.body;
 
   // request must have both
@@ -89,5 +89,51 @@ usersRouter.post('/register', async (req, res, next) => {
     next({ name, message })
   } 
 });
+
+usersRouter.delete("/:userId", requireUser, async (req, res, next) => {
+  const {id} = req.user
+  const {userId} = req.params
+  try {
+    if(id === Number(userId)) {
+      const updatedUser = await updateUser(id, {
+        active: false
+      })
+      res.send({updatedUser})
+    } else {
+      next(updatedUser ? { 
+        name: "UnauthorizedUserError",
+        message: "You cannot delete a user that isn't you"
+      } : {
+        name: "PostNotFoundError",
+        message: "That user does not exist"
+      });
+    }
+  } catch ({name, message}) {
+    next( {name, message})
+  }
+})
+
+usersRouter.patch("/:userId", requireUser, async (req, res, next) => {
+  const {id} = req.user
+  const {userId} = req.params
+  try {
+    if(id === Number(userId)) {
+      const updatedUser = await updateUser(id, {
+        active: true
+      })
+      res.send({updatedUser})
+    } else {
+      next(updatedUser ? { 
+        name: "UnauthorizedUserError",
+        message: "You cannot delete a user that isn't you"
+      } : {
+        name: "PostNotFoundError",
+        message: "That user does not exist"
+      });
+    }
+  } catch ({name, message}) {
+    next( {name, message})
+  }
+})
 
 module.exports = usersRouter;
